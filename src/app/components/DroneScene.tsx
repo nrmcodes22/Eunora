@@ -57,8 +57,8 @@ function DroneModel({ url }: { url: string }) {
           if ('color' in mat) {
             const m = mat as THREE.MeshStandardMaterial;
 
-            m.color.set(0xcccccc);      // silver base color
-            m.metalness = 0.9;           // very metallic
+            m.color.set(0xfffffff);      // silver base color
+            m.metalness = 0.4;           // very metallic
             m.roughness = 0.2;           // slightly smooth for shine
             m.map = null;                // ignore textures if you want pure silver
           }
@@ -214,7 +214,11 @@ function DroneRig({
       ry = -0.3 + 0.08 * Math.sin(time * 0.6);
       rz = 0.03 * Math.sin(time * 0.7);
     }
+    const tiltX = 0.3; // forward tilt
+    const tiltY = 0.18; // sideways slant
 
+    rx += tiltX;
+    ry += tiltY;
     const baseScale = isDesktop ? 3.4 : 2.7;
     const targetScale = baseScale;
 
