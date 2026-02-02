@@ -1,8 +1,8 @@
 "use client";
 import * as React from "react";
 import { Canvas, useFrame } from "@react-three/fiber";
-import { Environment, Float, useGLTF } from "@react-three/drei";
-import { motion, useScroll, useSpring, useTransform } from "framer-motion";
+import { useGLTF } from "@react-three/drei";
+
 import * as THREE from "three";
 
 // Extend JSX types for React Three Fiber
@@ -12,6 +12,7 @@ declare module 'react' {
       group: any;
       ambientLight: any;
       directionalLight: any;
+      hemisphereLight: any;
       primitive: any;
       mesh: any;
       boxGeometry: any;
@@ -40,24 +41,39 @@ type GLTFResult = {
 
 function DroneModel({ url }: { url: string }) {
   const gltf = useGLTF(url) as unknown as GLTFResult;
-  // Basic normalization: center and scale down a bit
   const ref = React.useRef<THREE.Group>(null);
 
   React.useEffect(() => {
     if (!ref.current) return;
+
     ref.current.traverse((child) => {
       if ((child as THREE.Mesh).isMesh) {
-        child.castShadow = true;
-        child.receiveShadow = true;
+        const mesh = child as THREE.Mesh;
+
+        // Handle multiple materials
+        const materials = Array.isArray(mesh.material) ? mesh.material : [mesh.material];
+
+        materials.forEach((mat) => {
+          if ('color' in mat) {
+            const m = mat as THREE.MeshStandardMaterial;
+
+            m.color.set(0xcccccc);      // silver base color
+            m.metalness = 0.9;           // very metallic
+            m.roughness = 0.2;           // slightly smooth for shine
+            m.map = null;                // ignore textures if you want pure silver
+          }
+        });
+
+        mesh.castShadow = true;
+        mesh.receiveShadow = true;
       }
     });
   }, []);
 
-  return (
-    
-    <primitive ref={ref} object={gltf.scene} />
-  );
+  return <primitive ref={ref} object={gltf.scene} />;
 }
+
+
 
 // Easing function for Pixar-style overshoot (elastic ease-out)
 function elasticEaseOut(t: number): number {
@@ -132,8 +148,8 @@ function DroneRig({
       if (isDesktop) {
         const startX = -3.5;
         const endX = 3.5;
-        const settleX = 1.2;
-        const baseY = 0.1;
+        const settleX = 0.8; // Moved closer to center, in the right column area
+        const baseY = 0.0; // Centered vertically
         const baseZ = 0.225;
 
         x = THREE.MathUtils.lerp(startX, endX, travelT);
@@ -148,9 +164,9 @@ function DroneRig({
       } else {
         const startY = -2.5;
         const endY = 2.0;
-        const settleY = 0.3; // Changed to be on top/near the text (was 0.3)
+        const settleY = 0.5; // Position above the centered text on mobile
         const baseX = 0;
-        const baseZ = 0.35;
+        const baseZ = 0.3; // Brought even closer for mobile
 
         x = baseX;
         y = THREE.MathUtils.lerp(startY, endY, travelT);
@@ -176,9 +192,9 @@ function DroneRig({
         }
       } else {
         // Fallback (shouldn't happen)
-        x = isDesktop ? 1.2 : 0;
-        y = isDesktop ? 0.1 : -0.3; // Changed mobile fallback position
-        z = isDesktop ? 0.225 : 0.35;
+        x = isDesktop ? 0.8 : 0;
+        y = isDesktop ? 0.0 : -0.5;
+        z = isDesktop ? 0.225 : 0.3;
       }
     }
 
@@ -244,17 +260,18 @@ export function DroneScene({
         shadows
         gl={{ alpha: true, antialias: true }}
       >
-       
-        <ambientLight intensity={0.5} />
-       
-        <directionalLight
-          position={[5, 5, 5]}
-          intensity={1}
-          castShadow
-          shadow-mapSize={[1024, 1024]}
-        />
+        
+        <ambientLight intensity={0.5} />  // base light
+<directionalLight 
+  position={[5, 10, 5]} 
+  intensity={1.5} 
+  castShadow 
+  shadow-mapSize={[2048, 2048]} 
+/>
+<directionalLight position={[-5, 5, -5]} intensity={0.8} />
+<hemisphereLight skyColor="#ffffff" groundColor="#222222" intensity={0.6} />
+
         <DroneRig progress={() => 0.5} modelUrl={modelUrl} />
-        <Environment preset="sunset" />
       </Canvas>
     </div>
   );
